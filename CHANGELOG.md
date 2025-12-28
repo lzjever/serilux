@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Registry-Based Method Deserialization**: Methods can be deserialized using ObjectRegistry
 - **Deeply Nested Container Support**: Full support for arbitrarily deep nesting of containers (dict -> list -> dict -> Serializable, etc.)
 - **Automatic Registration for Single Object Fields**: Single object fields (not in containers) are now automatically registered in Phase 2
+- **Class Name Conflict Detection**: ``@register_serializable`` now detects and prevents class name conflicts, raising ``ValueError`` when different classes with the same name are registered
 
 ### Enhanced
 
@@ -27,7 +28,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Phase 1 Deserialization**: Recursively finds and registers all Serializable objects in nested structures
 - **Phase 2 Deserialization**: Automatically registers single object fields immediately after creation
 - **deserialize_item**: Checks registry first before creating new objects, ensuring pre-registered objects are reused
-- **Error Messages**: Improved error messages for missing classes and deserialization failures
+- **SerializableRegistry.register_class**: Now detects class name conflicts and raises ``ValueError`` when attempting to register a different class with the same name
+- **Error Messages**: Improved error messages for missing classes, deserialization failures, and class name conflicts
 
 ### Changed
 

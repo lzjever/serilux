@@ -21,6 +21,53 @@ To create a serializable class, inherit from ``Serializable`` and use the
            self.field2 = 0
            self.add_serializable_fields(["field1", "field2"])
 
+Class Name Conflict Detection
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The ``@register_serializable`` decorator automatically detects and prevents class name conflicts.
+If you try to register a different class with the same name as an already registered class,
+a ``ValueError`` will be raised:
+
+.. code-block:: python
+
+   @register_serializable
+   class MyClass(Serializable):
+       def __init__(self):
+           super().__init__()
+           self.field1 = ""
+           self.add_serializable_fields(["field1"])
+
+   # This will raise ValueError: Class name conflict
+   @register_serializable
+   class MyClass(Serializable):  # Different class, same name
+       def __init__(self):
+           super().__init__()
+           self.field2 = ""  # Different field
+           self.add_serializable_fields(["field2"])
+
+**Why This Matters**:
+
+- Prevents accidental class name collisions that could lead to incorrect deserialization
+- Ensures that deserialization always uses the correct class definition
+- Helps catch bugs early during development
+
+**Re-registering the Same Class**:
+
+Re-registering the same class object is allowed (idempotent operation):
+
+.. code-block:: python
+
+   @register_serializable
+   class MyClass(Serializable):
+       def __init__(self):
+           super().__init__()
+           self.field1 = ""
+           self.add_serializable_fields(["field1"])
+
+   # Re-registering the same class is allowed
+   from serilux.serializable import SerializableRegistry
+   SerializableRegistry.register_class("MyClass", MyClass)  # OK
+
 Registering Fields
 ------------------
 

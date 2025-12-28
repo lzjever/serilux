@@ -106,6 +106,27 @@ class MyClass(Serializable):
         self.add_serializable_fields(["field1", "field2"])
 ```
 
+**Class Name Conflict Detection**: Serilux automatically detects and prevents class name conflicts.
+If you try to register a different class with the same name, a `ValueError` is raised to prevent
+incorrect deserialization:
+
+```python
+@register_serializable
+class Processor(Serializable):
+    def __init__(self):
+        super().__init__()
+        self.name = ""
+        self.add_serializable_fields(["name"])
+
+# This will raise ValueError: Class name conflict
+@register_serializable
+class Processor(Serializable):  # Different class, same name
+    def __init__(self):
+        super().__init__()
+        self.value = 0
+        self.add_serializable_fields(["value"])
+```
+
 ### 🌳 Nested Objects
 
 Automatically handles nested Serializable objects:

@@ -3,6 +3,73 @@ Advanced Usage
 
 This guide covers advanced features of Serilux.
 
+Class Name Conflict Detection
+------------------------------
+
+Serilux automatically detects and prevents class name conflicts when using ``@register_serializable``.
+This ensures that deserialization always uses the correct class definition and helps catch bugs early.
+
+**How It Works**:
+
+When you register a class with ``@register_serializable``, Serilux checks if a class with the same name
+is already registered. If a different class (not the same object) with the same name exists, a
+``ValueError`` is raised with detailed information about the conflict.
+
+**Example**:
+
+.. code-block:: python
+
+   from serilux import Serializable, register_serializable
+
+   @register_serializable
+   class Processor(Serializable):
+       def __init__(self):
+           super().__init__()
+           self.name = ""
+           self.add_serializable_fields(["name"])
+
+   # This will raise ValueError
+   @register_serializable
+   class Processor(Serializable):  # Different class, same name
+       def __init__(self):
+           super().__init__()
+           self.value = 0  # Different implementation
+           self.add_serializable_fields(["value"])
+
+**Error Message**:
+
+The error message provides clear information about the conflict:
+
+::
+
+   ValueError: Class name conflict: 'Processor' is already registered as 
+   <class 'mymodule.Processor'>. Cannot register <class 'mymodule.Processor'>. 
+   Please use a different class name or unregister the existing class first.
+
+**Best Practices**:
+
+1. **Use Unique Class Names**: Always use unique, descriptive class names across your project
+2. **Avoid Generic Names**: Avoid generic names like ``TestClass``, ``MyClass``, etc. in production code
+3. **Use Module-Specific Prefixes**: If you have classes that might conflict, use module-specific prefixes
+4. **Re-registration is Safe**: Re-registering the same class object is allowed and safe (idempotent)
+
+**Re-registering the Same Class**:
+
+If you need to re-register the same class (e.g., in tests or during module reload), this is allowed:
+
+.. code-block:: python
+
+   @register_serializable
+   class MyClass(Serializable):
+       def __init__(self):
+           super().__init__()
+           self.field = ""
+           self.add_serializable_fields(["field"])
+
+   # Re-registering the same class is allowed
+   from serilux.serializable import SerializableRegistry
+   SerializableRegistry.register_class("MyClass", MyClass)  # OK, no error
+
 Nested Objects
 --------------
 

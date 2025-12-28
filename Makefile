@@ -53,7 +53,7 @@ test-cov:
 	pytest tests/ --cov=serilux --cov-report=html --cov-report=term
 
 lint:
-	flake8 serilux/ tests/ examples/ --max-line-length=100 --extend-ignore=E203,W503
+	flake8 serilux/ tests/ examples/
 
 format:
 	black serilux/ tests/ examples/

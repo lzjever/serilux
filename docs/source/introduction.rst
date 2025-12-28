@@ -13,6 +13,7 @@ Key Features
 
 - **Simple API**: Just inherit from ``Serializable`` and you're ready to go
 - **Automatic Type Registration**: Classes are automatically registered for deserialization
+- **Class Name Conflict Detection**: Automatically detects and prevents class name conflicts
 - **Type Safety**: Built-in validation ensures objects can be properly deserialized
 - **Nested Objects**: Automatically handles nested Serializable objects, lists, and dictionaries
 - **Deeply Nested Containers**: Supports arbitrarily deep nesting (dict -> list -> dict -> Serializable, etc.)
