@@ -8,5 +8,7 @@ This section provides comprehensive guides for using Serilux.
 
    basic_usage
    advanced_usage
+   callable_serialization
+   object_registry
    validation
 

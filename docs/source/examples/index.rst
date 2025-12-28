@@ -8,4 +8,5 @@ This section contains practical examples of using Serilux.
 
    basic_usage
    advanced_usage
+   callable_serialization
 

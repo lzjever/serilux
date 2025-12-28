@@ -11,6 +11,12 @@ from serilux.serializable import (
     register_serializable,
     check_serializable_constructability,
     validate_serializable_tree,
+    ObjectRegistry,
+    serialize_callable,
+    serialize_callable_with_fallback,
+    deserialize_callable,
+    deserialize_lambda_expression,
+    extract_callable_expression,
 )
 
 __all__ = [
@@ -19,6 +25,12 @@ __all__ = [
     "register_serializable",
     "check_serializable_constructability",
     "validate_serializable_tree",
+    "ObjectRegistry",
+    "serialize_callable",
+    "serialize_callable_with_fallback",
+    "deserialize_callable",
+    "deserialize_lambda_expression",
+    "extract_callable_expression",
 ]
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"

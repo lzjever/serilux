@@ -13,6 +13,7 @@
 - 🔄 **Automatic Type Registration**: Classes are automatically registered for deserialization
 - 🛡️ **Type Safety**: Built-in validation ensures objects can be properly deserialized
 - 🌳 **Nested Objects**: Automatically handles nested Serializable objects, lists, and dictionaries
+- 🔧 **Callable Serialization**: Full support for serializing functions, methods, and lambda expressions
 - 🔒 **Security**: Strict mode prevents deserialization of unknown fields
 - ⚡ **Zero Dependencies**: Pure Python with no external dependencies
 - 🎓 **Easy to Use**: Minimal boilerplate, maximum flexibility
@@ -158,6 +159,42 @@ team.members = [person1, person2, person3]
 data = team.serialize()
 ```
 
+### 🔧 Callable Serialization
+
+Serilux supports serializing and deserializing callable objects (functions, methods, lambda expressions):
+
+```python
+from serilux import serialize_callable, deserialize_callable, serialize_callable_with_fallback
+
+# Serialize a function
+def process_data(data):
+    return data.upper()
+
+serialized = serialize_callable(process_data)
+restored = deserialize_callable(serialized)
+result = restored("hello")  # Returns "HELLO"
+
+# Serialize lambda expression
+condition = lambda x: x.get("priority") == "high"
+serialized_lambda = serialize_callable_with_fallback(condition)
+# Returns: {"_type": "lambda_expression", "expression": "x.get('priority') == 'high'"}
+```
+
+Callable fields in Serializable objects are automatically serialized:
+
+```python
+@register_serializable
+class Processor(Serializable):
+    def __init__(self):
+        super().__init__()
+        self.handler = None  # Will store a function
+        self.add_serializable_fields(["handler"])
+
+processor = Processor()
+processor.handler = process_data  # Function is automatically serialized
+data = processor.serialize()
+```
+
 ### 🔒 Strict Mode
 
 Enable strict mode to prevent deserialization of unknown fields:
@@ -204,7 +241,7 @@ Check out the `examples/` directory for practical examples:
 
 - **`basic_usage.py`** - Your first serializable class
 - **`advanced_usage.py`** - Nested objects, lists, and dictionaries
-- **`validation_example.py`** - Using validation features
+- **`callable_serialization.py`** - Serializing functions, methods, and lambda expressions
 
 Run examples:
 

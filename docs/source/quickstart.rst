@@ -108,6 +108,27 @@ Serilux also handles lists and dictionaries:
    # Serialize - list items are automatically serialized
    data = team.serialize()
 
+Callable Serialization
+-----------------------
+
+Serilux can also serialize callable objects (functions, methods, lambda expressions):
+
+.. code-block:: python
+
+   from serilux import serialize_callable, deserialize_callable
+
+   def process_data(data):
+       return data.upper()
+
+   # Serialize a function
+   serialized = serialize_callable(process_data)
+
+   # Deserialize it
+   restored = deserialize_callable(serialized)
+   result = restored("hello")  # Returns "HELLO"
+
+For more details on callable serialization, see the :doc:`user_guide/callable_serialization` guide.
+
 Next Steps
 ----------
 
