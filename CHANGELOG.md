@@ -5,7 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.2.0] - 2025-01-XX
+## [0.2.1] - 2025-12-29
+
+### Added
+
+- **GitHub Actions workflow**: Automated build and release workflow with automatic release notes generation
+- **Release scripts**: Scripts for generating release notes from CHANGELOG.md or git commits
+
+### Improved
+
+- **Documentation**: Updated documentation and README
+- **Code quality**: Added linting configuration (flake8) for better code quality
+- **Nested object support**: Enhanced support for deeply nested objects in serialization
+
+### Documentation
+
+- **Release automation**: Added scripts and documentation for automated releases
+- **GitHub integration**: Integrated GitHub Actions for automated package building and publishing
+
+## [0.2.0] - 2025-12-28
 
 ### Added
 
@@ -47,7 +65,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Tests for lambda expression serialization
 - Tests for ObjectRegistry functionality
 
-## [0.1.0] - 2025-01-XX
+## [0.1.0] - 2025-07-01
 
 ### Added
 
