@@ -308,7 +308,7 @@ We welcome contributions! Here's how you can help:
 
 ## 🏢 About Agentsmith
 
-**Serilux** is part of the **Agentsmith** open-source ecosystem. Agentsmith is a ToB intelligent agent and algorithm development platform, currently deployed in multiple highway management companies, securities firms, and regulatory agencies in China. The Agentsmith team is gradually open-sourcing the platform by removing proprietary code and algorithm modules, as well as enterprise-specific customizations, while decoupling the system for modular use by the open-source community.
+**Serilux** is part of the **Agentsmith** open-source ecosystem. Agentsmith is a ToB AI agent and algorithm development platform, currently deployed in multiple highway management companies, securities firms, and regulatory agencies in China. The Agentsmith team is gradually open-sourcing the platform by removing proprietary code and algorithm modules, as well as enterprise-specific customizations, while decoupling the system for modular use by the open-source community.
 
 ### 🌟 Agentsmith Open-Source Projects
 
@@ -319,7 +319,6 @@ We welcome contributions! Here's how you can help:
 
 These projects are modular components extracted from the Agentsmith platform, designed to be used independently or together to build powerful applications.
 
-> **Note**: Currently, GitHub is used for code synchronization and package releases. The team is gradually transitioning to use GitHub as the primary repository.
 
 ## 📄 License
 
