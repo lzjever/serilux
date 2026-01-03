@@ -96,7 +96,7 @@ def main():
     # Deserialize lambda
     deserialized_lambda = deserialize_lambda_expression(serialized_lambda)
     test_data = {"priority": "high"}
-    print(f"   Lambda works: {deserialized_lambda(test_data) == True}\n")
+    print(f"   Lambda works: {deserialized_lambda(test_data) is True}\n")
 
     # Example 4: Serialize lambda expression in Serializable object
     # Note: To ensure lambda is serialized as lambda_expression (not as function),
