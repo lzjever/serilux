@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **Test coverage gate**: Enforced 80% minimum test coverage in CI
+- **Edge case tests**: Added 19 new tests for edge cases and security validation
+- **Lambda security tests**: Added 6 new security tests for lambda deserialization
+- **Nesting depth protection**: Added `max_depth` parameter to `serialize()` to prevent stack overflow (default: 100)
+- **AST validation**: Added AST parsing and validation before lambda expression evaluation
+- **Function whitelist**: Implemented safe function whitelist for lambda expressions
+- **CLAUDE.md**: Added project guide for Claude Code AI assistant
+
+### Changed
+- **CI configuration**: Replaced `black` with `ruff format` for consistency
+- **Python version**: Fixed mypy configuration from Python 3.7 to 3.8
+- **Lambda deserialization**: Enhanced security with AST validation and function whitelisting
+- **Code style**: Fixed `SerializableClass` naming to `serializable_class`
+
+### Security
+- **Nesting depth limit**: Added protection against stack overflow from deeply nested structures
+- **Lambda injection protection**: Added AST validation to prevent code injection via lambda expressions
+- **Function call restrictions**: Lambda expressions can only call whitelisted safe functions
+
+### Testing
+- Test coverage increased from 71% to 85%
+- Added tests for serialization depth limits
+- Added tests for lambda security validation
+- Added tests for edge cases and error handling
+
 ## [0.3.1] - 2026-01-03
 
 ### Changed
