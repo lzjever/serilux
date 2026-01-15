@@ -161,6 +161,58 @@ class TestCallableExpressionExtraction:
 class TestErrorHandling:
     """Test error handling paths."""
 
+    def test_serialize_depth_limit(self):
+        """Test that serialization respects depth limit."""
+        # Create a deeply nested structure
+        obj = SimpleObject()
+        obj.add_serializable_fields(["nested"])
+
+        # Create 10 levels of nesting (should work)
+        current = obj
+        for i in range(10):
+            nested = SimpleObject()
+            nested.add_serializable_fields(["nested"])  # Add nested field to each object
+            nested.name = f"level_{i}"
+            current.nested = nested
+            current = nested
+
+        # Should serialize fine with default limit
+        data = obj.serialize()
+        assert data is not None
+
+        # Create a very deep structure (over 100 levels)
+        obj2 = SimpleObject()
+        obj2.add_serializable_fields(["nested"])
+        current = obj2
+        for i in range(101):
+            nested = SimpleObject()
+            nested.add_serializable_fields(["nested"])  # Add nested field to each object
+            nested.name = f"level_{i}"
+            current.nested = nested
+            current = nested
+
+        # Should raise ValueError due to depth limit
+        with pytest.raises(ValueError, match="depth limit"):
+            obj2.serialize(max_depth=100)
+
+    def test_serialize_custom_depth_limit(self):
+        """Test serialization with custom depth limit."""
+        obj = SimpleObject()
+        obj.add_serializable_fields(["nested"])
+
+        # Create 5 levels of nesting
+        current = obj
+        for i in range(5):
+            nested = SimpleObject()
+            nested.add_serializable_fields(["nested"])  # Add nested field to each object
+            nested.name = f"level_{i}"
+            current.nested = nested
+            current = nested
+
+        # Should fail with limit of 3
+        with pytest.raises(ValueError, match="depth limit"):
+            obj.serialize(max_depth=3)
+
     def test_deserialize_with_missing_class(self):
         """Test deserialization with missing class raises error."""
         obj = SimpleObject()

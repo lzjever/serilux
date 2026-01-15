@@ -254,7 +254,7 @@ class Serializable:
         """
         self.fields_to_serialize = [x for x in self.fields_to_serialize if x not in fields]
 
-    def serialize(self) -> Dict[str, Any]:
+    def serialize(self, max_depth: int = 100, _current_depth: int = 0) -> Dict[str, Any]:
         """Serialize the object to a dictionary.
 
         Automatically handles:
@@ -263,40 +263,61 @@ class Serializable:
         - Callable objects (functions, methods, builtins)
         - Lists and dicts containing callable objects
 
+        Args:
+            max_depth: Maximum nesting depth to prevent stack overflow (default: 100).
+            _current_depth: Current depth (used internally, do not set).
+
         Returns:
             Dictionary containing all serializable fields.
+
+        Raises:
+            ValueError: If nesting depth exceeds max_depth.
         """
+        # Check depth limit to prevent stack overflow attacks
+        if _current_depth >= max_depth:
+            raise ValueError(
+                f"Serialization depth limit ({max_depth}) exceeded. "
+                f"This may indicate a circular reference or excessively nested structure."
+            )
+
         data = {"_type": type(self).__name__}
         for field in self.fields_to_serialize:
             value = getattr(self, field, None)
             if isinstance(value, Serializable):
-                data[field] = value.serialize()
+                data[field] = value.serialize(max_depth=max_depth, _current_depth=_current_depth + 1)
             elif isinstance(value, list):
-                data[field] = [self._serialize_value(item) for item in value]
+                data[field] = [self._serialize_value(item, max_depth, _current_depth) for item in value]
             elif isinstance(value, dict):
                 # Recursively serialize nested dicts (which may contain Serializable objects)
-                data[field] = {k: self._serialize_value(v) for k, v in value.items()}
+                data[field] = {
+                    k: self._serialize_value(v, max_depth, _current_depth) for k, v in value.items()
+                }
             else:
-                data[field] = self._serialize_value(value)
+                data[field] = self._serialize_value(value, max_depth, _current_depth)
         return data
 
-    def _serialize_value(self, value: Any) -> Any:
+    def _serialize_value(self, value: Any, max_depth: int = 100, _current_depth: int = 0) -> Any:
         """Serialize a single value, handling callables and nested containers automatically.
 
         Args:
             value: Value to serialize.
+            max_depth: Maximum nesting depth to prevent stack overflow.
+            _current_depth: Current depth (used internally).
 
         Returns:
             Serialized value.
+
+        Raises:
+            ValueError: If nesting depth exceeds max_depth.
         """
         if isinstance(value, Serializable):
-            return value.serialize()
+            return value.serialize(max_depth=max_depth, _current_depth=_current_depth + 1)
         elif isinstance(value, list):
             # Recursively serialize lists (which may contain Serializable objects)
-            return [self._serialize_value(item) for item in value]
+            return [self._serialize_value(item, max_depth, _current_depth) for item in value]
         elif isinstance(value, dict):
             # Recursively serialize dicts (which may contain Serializable objects)
-            return {k: self._serialize_value(v) for k, v in value.items()}
+            return {k: self._serialize_value(v, max_depth, _current_depth) for k, v in value.items()}
         elif callable(value) and not isinstance(value, type):
             # Automatically serialize callables (functions, methods, etc.)
             # For methods, validate they belong to the object that owns this field
