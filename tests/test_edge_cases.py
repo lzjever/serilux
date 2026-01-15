@@ -3,8 +3,13 @@
 import pytest
 
 from serilux import (
+    ClassNotFoundError,
+    DeserializationError,
+    DepthLimitError,
+    InvalidFieldError,
     ObjectRegistry,
     Serializable,
+    UnknownFieldError,
     deserialize_lambda_expression,
     register_serializable,
     serialize_callable_with_fallback,
@@ -25,9 +30,9 @@ class TestEdgeCases:
     """Test edge cases and error paths."""
 
     def test_add_non_string_field_raises_error(self):
-        """Test that adding non-string fields raises ValueError."""
+        """Test that adding non-string fields raises InvalidFieldError."""
         obj = SimpleObject()
-        with pytest.raises(ValueError, match="All fields must be strings"):
+        with pytest.raises(InvalidFieldError, match="All fields must be strings"):
             obj.add_serializable_fields(["valid", 123, None])
 
     def test_remove_serializable_fields(self):
@@ -78,7 +83,7 @@ class TestEdgeCases:
         obj.deserialize(data, strict=False)
 
         # Should fail in strict mode
-        with pytest.raises(ValueError, match="Unknown fields"):
+        with pytest.raises(UnknownFieldError):
             obj.deserialize(data, strict=True)
 
     def test_object_registry_find_by_id_not_found(self):
@@ -245,8 +250,8 @@ class TestErrorHandling:
             current.nested = nested
             current = nested
 
-        # Should raise ValueError due to depth limit
-        with pytest.raises(ValueError, match="depth limit"):
+        # Should raise DepthLimitError due to depth limit
+        with pytest.raises(DepthLimitError):
             obj2.serialize(max_depth=100)
 
     def test_serialize_custom_depth_limit(self):
@@ -264,7 +269,7 @@ class TestErrorHandling:
             current = nested
 
         # Should fail with limit of 3
-        with pytest.raises(ValueError, match="depth limit"):
+        with pytest.raises(DepthLimitError):
             obj.serialize(max_depth=3)
 
     def test_deserialize_with_missing_class(self):
@@ -279,7 +284,7 @@ class TestErrorHandling:
             "nested_obj": {"_type": "NonExistentClass", "value": 123},
         }
         # Should raise error when trying to deserialize the nested object
-        with pytest.raises(ValueError, match="Failed to deserialize field"):
+        with pytest.raises(DeserializationError):
             obj.deserialize(data)
 
     def test_deserialize_item_with_missing_class(self):
@@ -287,5 +292,5 @@ class TestErrorHandling:
         from serilux.serializable import Serializable
 
         data = {"_type": "NonExistentClass", "value": 42}
-        with pytest.raises(ValueError, match="class not found in registry"):
+        with pytest.raises(ClassNotFoundError):
             Serializable.deserialize_item(data)

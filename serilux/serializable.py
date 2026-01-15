@@ -8,6 +8,17 @@ import importlib
 import inspect
 from typing import Any, Callable, Dict, List, Optional
 
+from serilux.exceptions import (
+    CallableError,
+    ClassNotFoundError,
+    DepthLimitError,
+    DeserializationError,
+    InvalidFieldError,
+    SerializationError,
+    UnknownFieldError,
+    ValidationError,
+)
+
 
 class SerializableRegistry:
     """Registry for serializable classes to facilitate class lookup and instantiation."""
@@ -239,10 +250,13 @@ class Serializable:
             fields: List of field names to be serialized.
 
         Raises:
-            ValueError: If any provided field is not a string.
+            InvalidFieldError: If any provided field is not a string.
         """
         if not all(isinstance(field, str) for field in fields):
-            raise ValueError("All fields must be strings")
+            raise InvalidFieldError(
+                field_name="multiple",
+                reason="All fields must be strings"
+            )
         self.fields_to_serialize.extend(fields)
         self.fields_to_serialize = list(set(self.fields_to_serialize))
 
@@ -271,14 +285,11 @@ class Serializable:
             Dictionary containing all serializable fields.
 
         Raises:
-            ValueError: If nesting depth exceeds max_depth.
+            DepthLimitError: If nesting depth exceeds max_depth.
         """
         # Check depth limit to prevent stack overflow attacks
         if _current_depth >= max_depth:
-            raise ValueError(
-                f"Serialization depth limit ({max_depth}) exceeded. "
-                f"This may indicate a circular reference or excessively nested structure."
-            )
+            raise DepthLimitError(max_depth=max_depth, current_depth=_current_depth)
 
         data = {"_type": type(self).__name__}
         for field in self.fields_to_serialize:
@@ -481,11 +492,7 @@ class Serializable:
                             # Try to deserialize as Serializable object
                             attr_class = SerializableRegistry.get_class(value["_type"])
                             if attr_class is None:
-                                raise ValueError(
-                                    f"Cannot deserialize object of type '{value['_type']}' in field '{key}': "
-                                    f"class not found in registry. "
-                                    f"This usually means the class was not registered with @register_serializable."
-                                )
+                                raise ClassNotFoundError(value["_type"])
                             attr: Serializable = attr_class()
                             # Register object in registry if it has an _id (for method deserialization)
                             # This ensures methods in nested objects can find their owner objects
@@ -521,14 +528,16 @@ class Serializable:
                     attr = value
                 setattr(self, key, attr)
             except Exception as e:
-                raise ValueError(
-                    f"Failed to deserialize field '{key}' of {type(self).__name__}: {str(e)}"
+                raise DeserializationError(
+                    message=f"Failed to deserialize field '{key}'",
+                    obj_type=type(self).__name__,
+                    field=key
                 ) from e
 
         if unknown_fields and strict:
-            raise ValueError(
-                f"Unknown fields in {type(self).__name__}: {', '.join(unknown_fields)}. "
-                f"Expected fields: {', '.join(self.fields_to_serialize)}"
+            raise UnknownFieldError(
+                field_name=unknown_fields[0],
+                obj_type=type(self).__name__
             )
 
     @staticmethod
@@ -556,11 +565,7 @@ class Serializable:
 
                 # If class not found, raise error
                 if attr_class is None:
-                    raise ValueError(
-                        f"Cannot deserialize object of type '{item['_type']}': "
-                        f"class not found in registry. "
-                        f"This usually means the class was not registered with @register_serializable."
-                    )
+                    raise ClassNotFoundError(item["_type"])
 
                 # Check if object is already registered (from Phase 1)
                 object_id = item.get("_id")
