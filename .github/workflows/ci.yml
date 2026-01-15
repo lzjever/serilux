@@ -58,10 +58,15 @@ jobs:
       - name: Run linting
         run: |
           uv run ruff check serilux/ tests/ examples/
-      
+
       - name: Check formatting
         run: |
           uv run ruff format --check serilux/ tests/ examples/
+
+      - name: Type check (mypy) - non-blocking
+        run: |
+          uv run mypy serilux/ --ignore-missing-imports --no-strict-optional --no-strict || echo "mypy found issues (non-blocking)"
+        continue-on-error: true
 
   build:
     runs-on: ubuntu-latest
