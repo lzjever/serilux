@@ -104,7 +104,7 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
-addopts = "-v --tb=short"
+addopts = "-v --tb=short --cov=serilux --cov-report=term-missing --cov-fail-under=80"
 
 [tool.mypy]
 python_version = "3.8"
