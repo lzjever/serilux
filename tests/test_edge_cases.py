@@ -127,7 +127,7 @@ class TestEdgeCases:
 
     def test_deserialize_lambda_with_syntax_error(self):
         """Test deserialize_lambda_expression with syntax error."""
-        with pytest.raises(ValueError, match="syntax error"):
+        with pytest.raises(ValueError, match="syntax|invalid"):
             deserialize_lambda_expression({
                 "_type": "lambda_expression",
                 "expression": "this is not valid python !@#"
@@ -156,6 +156,66 @@ class TestCallableExpressionExtraction:
         result = serialize_callable_with_fallback(condition, fallback_to_expression=False)
         # Should still work if lambda can be serialized
         assert result is not None
+
+
+class TestLambdaSecurity:
+    """Test lambda deserialization security."""
+
+    def test_deserialize_safe_lambda(self):
+        """Test that safe lambda expressions can be deserialized."""
+        # Safe comparison
+        result = deserialize_lambda_expression({
+            "_type": "lambda_expression",
+            "expression": "data.get('priority') == 'high'"
+        })
+        assert result is not None
+        assert callable(result)
+        assert result({"priority": "high"}) is True
+
+    def test_deserialize_lambda_with_method_call(self):
+        """Test lambda with method call."""
+        result = deserialize_lambda_expression({
+            "_type": "lambda_expression",
+            "expression": "len(data.get('items', [])) > 0"
+        })
+        assert result is not None
+        assert result({"items": [1, 2, 3]}) is True
+
+    def test_deserialize_lambda_unsafe_function_call_rejected(self):
+        """Test that unsafe function calls are rejected by safe_globals."""
+        # exec is not in safe_globals, should raise error
+        with pytest.raises(ValueError, match="error evaluating"):
+            deserialize_lambda_expression({
+                "_type": "lambda_expression",
+                "expression": "exec('print(1)')"
+            })
+
+    def test_deserialize_lambda_eval_rejected(self):
+        """Test that eval is not in safe_globals."""
+        # eval is not in safe_globals, should raise error
+        with pytest.raises(ValueError, match="error evaluating"):
+            deserialize_lambda_expression({
+                "_type": "lambda_expression",
+                "expression": "eval('1+1')"
+            })
+
+    def test_deserialize_lambda_complicated_call_rejected(self):
+        """Test that complicated function call structures are rejected."""
+        # Call on non-name/non-attribute should be rejected
+        with pytest.raises(ValueError, match="Unsafe function call"):
+            deserialize_lambda_expression({
+                "_type": "lambda_expression",
+                "expression": "(lambda x: x+1)(5)"
+            })
+
+    def test_deserialize_lambda_with_import_rejected(self):
+        """Test that import statements are rejected."""
+        # Try to import (should fail syntax check or AST validation)
+        with pytest.raises(ValueError):
+            deserialize_lambda_expression({
+                "_type": "lambda_expression",
+                "expression": "import os; data.get('x')"
+            })
 
 
 class TestErrorHandling:
