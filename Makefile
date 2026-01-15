@@ -1,4 +1,4 @@
-.PHONY: help clean install dev-install test test-all test-cov test-integration lint format format-check check build sdist wheel docs html clean-docs upload upload-test check-package setup-venv
+.PHONY: help clean install dev-install test test-all test-cov test-integration lint format format-check check build sdist wheel docs html clean-docs upload upload-test check-package setup-venv pre-commit pre-commit-install pre-commit-update pre-commit-run
 
 # Use uv if available, otherwise fall back to pip
 UV := $(shell command -v uv 2>/dev/null)
@@ -32,6 +32,9 @@ help:
 	@echo "  format        - Format code with ruff"
 	@echo "  format-check  - Check code formatting"
 	@echo "  check         - Run all checks (lint + format check + tests)"
+	@echo "  pre-commit    - Run pre-commit hooks on all files"
+	@echo "  pre-commit-install - Install pre-commit hooks"
+	@echo "  pre-commit-update - Update pre-commit hooks"
 	@echo ""
 	@echo "Building:"
 	@echo "  build         - Build source and wheel distributions"
@@ -112,6 +115,22 @@ format-check:
 
 check: lint format-check test
 	@echo "All checks passed!"
+
+pre-commit-install:
+	@echo "Installing pre-commit hooks..."
+	$(PYTHON_CMD) -m pre-commit install
+
+pre-commit-update:
+	@echo "Updating pre-commit hooks..."
+	$(PYTHON_CMD) -m pre-commit autoupdate
+
+pre-commit:
+	@echo "Running pre-commit hooks on all files..."
+	$(PYTHON_CMD) -m pre-commit run --all-files
+
+pre-commit-run:
+	@echo "Running pre-commit hooks on staged files..."
+	$(PYTHON_CMD) -m pre-commit run
 
 build: clean
 	@if [ -n "$(UV)" ]; then \

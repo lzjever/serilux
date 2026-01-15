@@ -3,7 +3,8 @@ Tests for the Serializable class and core serialization functionality.
 """
 
 import pytest
-from serilux import Serializable, register_serializable
+
+from serilux import Serializable, UnknownFieldError, register_serializable
 
 
 class TestSerializable:
@@ -219,7 +220,7 @@ class TestSerializable:
         assert person.name == "Alice"
 
         # Strict mode should raise error
-        with pytest.raises(ValueError, match="Unknown fields"):
+        with pytest.raises(UnknownFieldError):
             person.deserialize(data, strict=True)
 
     def test_deserialize_item(self, clear_registry):

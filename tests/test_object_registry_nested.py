@@ -3,9 +3,9 @@ Test ObjectRegistry with nested objects to verify automatic registration works.
 """
 
 from serilux import (
+    ObjectRegistry,
     Serializable,
     register_serializable,
-    ObjectRegistry,
 )
 
 

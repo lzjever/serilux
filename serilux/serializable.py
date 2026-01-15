@@ -6,7 +6,15 @@ Generic serialization/deserialization for objects and callable types.
 
 import importlib
 import inspect
-from typing import Any, Dict, List, Optional, Callable
+from typing import Any, Callable, Dict, List, Optional
+
+from serilux.exceptions import (
+    ClassNotFoundError,
+    DepthLimitError,
+    DeserializationError,
+    InvalidFieldError,
+    UnknownFieldError,
+)
 
 
 class SerializableRegistry:
@@ -148,9 +156,9 @@ def validate_serializable_tree(obj: "Serializable", visited: Optional[set] = Non
                 continue
 
             # Import Serializable here to avoid circular import
-            SerializableClass = Serializable
+            serializable_class = Serializable
 
-            if isinstance(field_value, SerializableClass):
+            if isinstance(field_value, serializable_class):
                 try:
                     validate_serializable_tree(field_value, visited)
                 except TypeError as e:
@@ -159,7 +167,7 @@ def validate_serializable_tree(obj: "Serializable", visited: Optional[set] = Non
                     ) from e
             elif isinstance(field_value, list):
                 for i, item in enumerate(field_value):
-                    if isinstance(item, SerializableClass):
+                    if isinstance(item, serializable_class):
                         try:
                             validate_serializable_tree(item, visited)
                         except TypeError as e:
@@ -168,7 +176,7 @@ def validate_serializable_tree(obj: "Serializable", visited: Optional[set] = Non
                             ) from e
             elif isinstance(field_value, dict):
                 for key, value in field_value.items():
-                    if isinstance(value, SerializableClass):
+                    if isinstance(value, serializable_class):
                         try:
                             validate_serializable_tree(value, visited)
                         except TypeError as e:
@@ -239,10 +247,10 @@ class Serializable:
             fields: List of field names to be serialized.
 
         Raises:
-            ValueError: If any provided field is not a string.
+            InvalidFieldError: If any provided field is not a string.
         """
         if not all(isinstance(field, str) for field in fields):
-            raise ValueError("All fields must be strings")
+            raise InvalidFieldError(field_name="multiple", reason="All fields must be strings")
         self.fields_to_serialize.extend(fields)
         self.fields_to_serialize = list(set(self.fields_to_serialize))
 
@@ -254,7 +262,7 @@ class Serializable:
         """
         self.fields_to_serialize = [x for x in self.fields_to_serialize if x not in fields]
 
-    def serialize(self) -> Dict[str, Any]:
+    def serialize(self, max_depth: int = 100, _current_depth: int = 0) -> Dict[str, Any]:
         """Serialize the object to a dictionary.
 
         Automatically handles:
@@ -263,40 +271,64 @@ class Serializable:
         - Callable objects (functions, methods, builtins)
         - Lists and dicts containing callable objects
 
+        Args:
+            max_depth: Maximum nesting depth to prevent stack overflow (default: 100).
+            _current_depth: Current depth (used internally, do not set).
+
         Returns:
             Dictionary containing all serializable fields.
+
+        Raises:
+            DepthLimitError: If nesting depth exceeds max_depth.
         """
+        # Check depth limit to prevent stack overflow attacks
+        if _current_depth >= max_depth:
+            raise DepthLimitError(max_depth=max_depth, current_depth=_current_depth)
+
         data = {"_type": type(self).__name__}
         for field in self.fields_to_serialize:
             value = getattr(self, field, None)
             if isinstance(value, Serializable):
-                data[field] = value.serialize()
+                data[field] = value.serialize(
+                    max_depth=max_depth, _current_depth=_current_depth + 1
+                )
             elif isinstance(value, list):
-                data[field] = [self._serialize_value(item) for item in value]
+                data[field] = [
+                    self._serialize_value(item, max_depth, _current_depth) for item in value
+                ]
             elif isinstance(value, dict):
                 # Recursively serialize nested dicts (which may contain Serializable objects)
-                data[field] = {k: self._serialize_value(v) for k, v in value.items()}
+                data[field] = {
+                    k: self._serialize_value(v, max_depth, _current_depth) for k, v in value.items()
+                }
             else:
-                data[field] = self._serialize_value(value)
+                data[field] = self._serialize_value(value, max_depth, _current_depth)
         return data
 
-    def _serialize_value(self, value: Any) -> Any:
+    def _serialize_value(self, value: Any, max_depth: int = 100, _current_depth: int = 0) -> Any:
         """Serialize a single value, handling callables and nested containers automatically.
 
         Args:
             value: Value to serialize.
+            max_depth: Maximum nesting depth to prevent stack overflow.
+            _current_depth: Current depth (used internally).
 
         Returns:
             Serialized value.
+
+        Raises:
+            ValueError: If nesting depth exceeds max_depth.
         """
         if isinstance(value, Serializable):
-            return value.serialize()
+            return value.serialize(max_depth=max_depth, _current_depth=_current_depth + 1)
         elif isinstance(value, list):
             # Recursively serialize lists (which may contain Serializable objects)
-            return [self._serialize_value(item) for item in value]
+            return [self._serialize_value(item, max_depth, _current_depth) for item in value]
         elif isinstance(value, dict):
             # Recursively serialize dicts (which may contain Serializable objects)
-            return {k: self._serialize_value(v) for k, v in value.items()}
+            return {
+                k: self._serialize_value(v, max_depth, _current_depth) for k, v in value.items()
+            }
         elif callable(value) and not isinstance(value, type):
             # Automatically serialize callables (functions, methods, etc.)
             # For methods, validate they belong to the object that owns this field
@@ -454,11 +486,7 @@ class Serializable:
                             # Try to deserialize as Serializable object
                             attr_class = SerializableRegistry.get_class(value["_type"])
                             if attr_class is None:
-                                raise ValueError(
-                                    f"Cannot deserialize object of type '{value['_type']}' in field '{key}': "
-                                    f"class not found in registry. "
-                                    f"This usually means the class was not registered with @register_serializable."
-                                )
+                                raise ClassNotFoundError(value["_type"])
                             attr: Serializable = attr_class()
                             # Register object in registry if it has an _id (for method deserialization)
                             # This ensures methods in nested objects can find their owner objects
@@ -494,15 +522,14 @@ class Serializable:
                     attr = value
                 setattr(self, key, attr)
             except Exception as e:
-                raise ValueError(
-                    f"Failed to deserialize field '{key}' of {type(self).__name__}: {str(e)}"
+                raise DeserializationError(
+                    message=f"Failed to deserialize field '{key}'",
+                    obj_type=type(self).__name__,
+                    field=key,
                 ) from e
 
         if unknown_fields and strict:
-            raise ValueError(
-                f"Unknown fields in {type(self).__name__}: {', '.join(unknown_fields)}. "
-                f"Expected fields: {', '.join(self.fields_to_serialize)}"
-            )
+            raise UnknownFieldError(field_name=unknown_fields[0], obj_type=type(self).__name__)
 
     @staticmethod
     def deserialize_item(item: Any, registry: Optional[Any] = None) -> Any:
@@ -529,11 +556,7 @@ class Serializable:
 
                 # If class not found, raise error
                 if attr_class is None:
-                    raise ValueError(
-                        f"Cannot deserialize object of type '{item['_type']}': "
-                        f"class not found in registry. "
-                        f"This usually means the class was not registered with @register_serializable."
-                    )
+                    raise ClassNotFoundError(item["_type"])
 
                 # Check if object is already registered (from Phase 1)
                 object_id = item.get("_id")
@@ -1025,6 +1048,7 @@ def deserialize_lambda_expression(
         )
 
     try:
+        import ast
         import re as re_module
 
         # Remove 'return' keyword if present (for function bodies converted to lambda)
@@ -1036,16 +1060,194 @@ def deserialize_lambda_expression(
         # Pattern: word boundary + common param names + word boundary
         expr = re_module.sub(r"\b(x|item|value|obj)\b", default_param_name, expr)
 
+        # Security: Validate AST before eval to prevent code injection
+        # Only allow safe AST node types
+        allowed_nodes = (
+            ast.Expression,  # Root expression
+            ast.Compare,  # Comparisons (==, !=, <, >, <=, >=)
+            ast.BoolOp,  # Boolean operations (and, or)
+            ast.BinOp,  # Binary operations (+, -, *, /, etc.)
+            ast.UnaryOp,  # Unary operations (not, +, -, ~)
+            ast.IfExp,  # Conditional expressions (x if cond else y)
+            ast.Call,  # Function/method calls (restricted)
+            ast.Attribute,  # Attribute access (obj.method)
+            ast.Name,  # Variable names
+            ast.Constant,  # Constants (numbers, strings, None, True, False)
+            ast.Load,  # Load context
+            ast.Subscript,  # Subscript access (obj[key])
+            ast.Index,  # Index for subscripts
+            ast.List,  # List literals
+            ast.Dict,  # Dict literals
+            ast.Tuple,  # Tuple literals
+            ast.Set,  # Set literals
+            ast.comprehension,  # List/dict/set comprehensions
+        )
+
+        # Also allow operator types (subclasses of ast.cmpop, ast.boolop, etc.)
+        import ast as ast_module
+
+        operator_types = (
+            # Comparison operators
+            ast_module.Eq,
+            ast_module.NotEq,
+            ast_module.Lt,
+            ast_module.LtE,
+            ast_module.Gt,
+            ast_module.GtE,
+            ast_module.Is,
+            ast_module.IsNot,
+            ast_module.In,
+            ast_module.NotIn,
+            # Boolean operators
+            ast_module.And,
+            ast_module.Or,
+            # Binary operators
+            ast_module.Add,
+            ast_module.Sub,
+            ast_module.Mult,
+            ast_module.Div,
+            ast_module.FloorDiv,
+            ast_module.Mod,
+            ast_module.Pow,
+            ast_module.LShift,
+            ast_module.RShift,
+            ast_module.BitOr,
+            ast_module.BitXor,
+            ast_module.BitAnd,
+            ast_module.MatMult,
+            # Unary operators
+            ast_module.UAdd,
+            ast_module.USub,
+            ast_module.Not,
+            ast_module.Invert,
+        )
+
+        try:
+            # Parse the expression to AST
+            tree = ast.parse(expr, mode="eval")
+
+            # Whitelist of allowed function names
+            safe_functions = {
+                "isinstance",
+                "dict",
+                "list",
+                "str",
+                "int",
+                "float",
+                "bool",
+                "len",
+                "sum",
+                "min",
+                "max",
+                "abs",
+                "any",
+                "all",
+                "range",
+                "enumerate",
+                "zip",
+                "map",
+                "filter",
+                "sorted",
+                "reversed",
+                "set",
+                "tuple",
+                "frozenset",
+                "bytes",
+                "bytearray",
+                "ord",
+                "chr",
+                "hex",
+                "oct",
+                "bin",
+                "round",
+                "pow",
+                "divmod",
+                "hasattr",
+                "getattr",
+            }
+
+            # Validate AST nodes
+            for node in ast.walk(tree):
+                # Allow if it's in allowed_nodes or is an operator type
+                if not isinstance(node, allowed_nodes + operator_types):
+                    raise ValueError(
+                        f"Unsafe operation in lambda expression: {type(node).__name__}. "
+                        f"Only basic comparisons, boolean logic, and data access are allowed."
+                    )
+
+                # Additional check: restrict function calls to safe methods only
+                if isinstance(node, ast.Call):
+                    # Only allow method calls on names (not arbitrary expressions)
+                    if not isinstance(node.func, (ast.Name, ast.Attribute)):
+                        raise ValueError(
+                            "Unsafe function call in lambda expression. "
+                            "Only simple method calls are allowed."
+                        )
+
+                    # Check if function name is in whitelist
+                    if isinstance(node.func, ast.Name):
+                        func_name = node.func.id
+                        if func_name not in safe_functions:
+                            raise ValueError(
+                                f"Unsafe function call: '{func_name}' is not allowed. "
+                                f"Only safe built-in functions are permitted."
+                            )
+
+        except (ValueError, SyntaxError) as ast_error:
+            raise ValueError(
+                f"Failed to deserialize lambda expression: "
+                f"unsafe or invalid expression '{expr}'. {ast_error}"
+            ) from ast_error
+
         # Safe evaluation to restore lambda
+        # Whitelist of allowed function names
+        safe_functions = {
+            "isinstance",
+            "dict",
+            "list",
+            "str",
+            "int",
+            "float",
+            "bool",
+            "len",
+            "sum",
+            "min",
+            "max",
+            "abs",
+            "any",
+            "all",
+            "range",
+            "enumerate",
+            "zip",
+            "map",
+            "filter",
+            "sorted",
+            "reversed",
+            "set",
+            "tuple",
+            "frozenset",
+            "bytes",
+            "bytearray",
+            "ord",
+            "chr",
+            "hex",
+            "oct",
+            "bin",
+            "round",
+            "pow",
+            "divmod",
+            "isinstance",
+            "issubclass",
+            "hasattr",
+            "getattr",
+            "setattr",
+            "getitem",
+            "getslice",
+        }
+
         safe_globals = {
             "__builtins__": {
-                "isinstance": isinstance,
-                "dict": dict,
-                "list": list,
-                "str": str,
-                "int": int,
-                "float": float,
-                "bool": bool,
+                name: __builtins__.get(name) for name in safe_functions if name in __builtins__
             }
         }
         condition = eval(f"lambda {default_param_name}: {expr}", safe_globals)

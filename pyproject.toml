@@ -39,6 +39,7 @@ dev = [
     "sphinx-rtd-theme>=1.0.0",
     "ruff>=0.1.0",
     "mypy>=0.991",
+    "pre-commit>=3.0.0",
 ]
 
 docs = [
@@ -56,6 +57,7 @@ dev = [
     "pytest-cov>=4.0.0",
     "ruff>=0.1.0",
     "mypy>=0.991",
+    "pre-commit>=3.0.0",
     "build>=0.10.0",
 ]
 docs = [
@@ -95,6 +97,11 @@ target-version = "py38"
 select = ["E", "F", "I", "N", "W", "UP"]
 ignore = ["E501"]
 
+[tool.ruff.lint.per-file-ignores]
+"examples/*" = ["E731"]  # Allow lambda assignments in examples
+"tests/*" = ["E731"]  # Allow lambda assignments in tests
+"*.pyi" = ["UP006", "UP007", "UP045"]  # Keep traditional typing in stub files
+
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"
@@ -104,10 +111,10 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
-addopts = "-v --tb=short"
+addopts = "-v --tb=short --cov=serilux --cov-report=term-missing --cov-fail-under=80"
 
 [tool.mypy]
-python_version = "3.7"
+python_version = "3.8"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = false

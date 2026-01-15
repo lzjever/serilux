@@ -5,6 +5,58 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2025-01-15
+
+### Added
+- **Test coverage gate**: Enforced 80% minimum test coverage in CI
+- **Edge case tests**: Added 19 new tests for edge cases and security validation
+- **Lambda security tests**: Added 6 new security tests for lambda deserialization
+- **Nesting depth protection**: Added `max_depth` parameter to `serialize()` to prevent stack overflow (default: 100)
+- **AST validation**: Added AST parsing and validation before lambda expression evaluation
+- **Function whitelist**: Implemented safe function whitelist for lambda expressions
+- **Custom exception hierarchy**: Added 10 specific exception types for better error handling
+  - `SeriluxError` (base exception)
+  - `SerializationError`, `DeserializationError`
+  - `ClassNotFoundError`, `ValidationError`
+  - `CircularReferenceError`, `DepthLimitError`
+  - `CallableError`, `InvalidFieldError`, `UnknownFieldError`
+- **Type stub file**: Added `serilux/__init__.pyi` for better IDE support and type checking
+- **Pre-commit hooks**: Added comprehensive pre-commit configuration for code quality
+- **CLAUDE.md**: Added project guide for Claude Code AI assistant
+- **Architecture documentation**: Added comprehensive architecture documentation in `docs/architecture.md`
+
+### Changed
+- **CI configuration**: Replaced `black` with `ruff format` for consistency
+- **Python version**: Fixed mypy configuration from Python 3.7 to 3.8
+- **Lambda deserialization**: Enhanced security with AST validation and function whitelisting
+- **Code style**: Fixed `SerializableClass` naming to `serializable_class`
+- **Error handling**: Replaced generic `ValueError` with specific custom exceptions throughout codebase
+
+### Security
+- **Nesting depth limit**: Added protection against stack overflow from deeply nested structures
+- **Lambda injection protection**: Added AST validation to prevent code injection via lambda expressions
+- **Function call restrictions**: Lambda expressions can only call whitelisted safe functions
+- **Enhanced validation**: Improved input validation and error reporting
+
+### Testing
+- Test coverage increased from 71% to 85%
+- Added 25 new tests (from 57 to 82 total)
+- Added tests for serialization depth limits
+- Added tests for lambda security validation
+- Added tests for edge cases and error handling
+- Added tests for custom exception types
+
+### Documentation
+- Updated `CONTRIBUTING.md` with comprehensive development workflow
+- Added `docs/architecture.md` with detailed architecture explanation
+- Added type hints via type stub file for better IDE support
+
+### Developer Experience
+- Added pre-commit hooks for automated code quality checks
+- Added mypy type checking to CI (non-blocking)
+- Improved error messages with context (object type, field name)
+- Better exception hierarchy for precise error handling
+
 ## [0.3.1] - 2026-01-03
 
 ### Changed

@@ -3,10 +3,11 @@ Test class name conflict detection in @register_serializable decorator.
 """
 
 import pytest
+
 from serilux import (
     Serializable,
-    register_serializable,
     SerializableRegistry,
+    register_serializable,
 )
 
 
@@ -190,7 +191,7 @@ def test_unregister_then_register_different_class():
 
     # Now register a different class with same name
     @register_serializable
-    class UnregisterTest(Serializable):
+    class UnregisterTest(Serializable):  # noqa: F811 - intentional redefinition for testing
         def __init__(self):
             super().__init__()
             self.new = ""

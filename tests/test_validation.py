@@ -3,10 +3,11 @@ Tests for validation functions.
 """
 
 import pytest
+
 from serilux import (
     Serializable,
-    register_serializable,
     check_serializable_constructability,
+    register_serializable,
     validate_serializable_tree,
 )
 

@@ -4,14 +4,14 @@
 测试 serialization_utils 模块的所有功能，提高代码覆盖率。
 """
 
-from serilux import (
-    serialize_callable,
-    deserialize_callable,
-    ObjectRegistry,
-)
-
 # For testing, we'll create a simple Routine-like class
-from serilux import Serializable, register_serializable
+from serilux import (
+    ObjectRegistry,
+    Serializable,
+    deserialize_callable,
+    register_serializable,
+    serialize_callable,
+)
 
 
 @register_serializable
