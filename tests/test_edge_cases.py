@@ -4,8 +4,8 @@ import pytest
 
 from serilux import (
     ClassNotFoundError,
-    DeserializationError,
     DepthLimitError,
+    DeserializationError,
     InvalidFieldError,
     ObjectRegistry,
     Serializable,

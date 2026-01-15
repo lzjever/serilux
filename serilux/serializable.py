@@ -9,14 +9,11 @@ import inspect
 from typing import Any, Callable, Dict, List, Optional
 
 from serilux.exceptions import (
-    CallableError,
     ClassNotFoundError,
     DepthLimitError,
     DeserializationError,
     InvalidFieldError,
-    SerializationError,
     UnknownFieldError,
-    ValidationError,
 )
 
 
@@ -253,10 +250,7 @@ class Serializable:
             InvalidFieldError: If any provided field is not a string.
         """
         if not all(isinstance(field, str) for field in fields):
-            raise InvalidFieldError(
-                field_name="multiple",
-                reason="All fields must be strings"
-            )
+            raise InvalidFieldError(field_name="multiple", reason="All fields must be strings")
         self.fields_to_serialize.extend(fields)
         self.fields_to_serialize = list(set(self.fields_to_serialize))
 
@@ -531,14 +525,11 @@ class Serializable:
                 raise DeserializationError(
                     message=f"Failed to deserialize field '{key}'",
                     obj_type=type(self).__name__,
-                    field=key
+                    field=key,
                 ) from e
 
         if unknown_fields and strict:
-            raise UnknownFieldError(
-                field_name=unknown_fields[0],
-                obj_type=type(self).__name__
-            )
+            raise UnknownFieldError(field_name=unknown_fields[0], obj_type=type(self).__name__)
 
     @staticmethod
     def deserialize_item(item: Any, registry: Optional[Any] = None) -> Any:

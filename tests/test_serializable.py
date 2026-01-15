@@ -4,7 +4,7 @@ Tests for the Serializable class and core serialization functionality.
 
 import pytest
 
-from serilux import Serializable, register_serializable, UnknownFieldError
+from serilux import Serializable, UnknownFieldError, register_serializable
 
 
 class TestSerializable:

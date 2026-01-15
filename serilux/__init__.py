@@ -12,8 +12,8 @@ from serilux.exceptions import (
     DepthLimitError,
     DeserializationError,
     InvalidFieldError,
-    SeriluxError,
     SerializationError,
+    SeriluxError,
     UnknownFieldError,
     ValidationError,
 )
@@ -59,4 +59,4 @@ __all__ = [
     "UnknownFieldError",
 ]
 
-__version__ = "0.3.1"
+__version__ = "0.4.0"
