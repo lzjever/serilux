@@ -8,9 +8,9 @@ This test verifies that the implementation can handle complex nested structures 
 """
 
 from serilux import (
+    ObjectRegistry,
     Serializable,
     register_serializable,
-    ObjectRegistry,
 )
 
 

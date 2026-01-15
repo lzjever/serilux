@@ -9,13 +9,13 @@ This example demonstrates:
 """
 
 from serilux import (
+    ObjectRegistry,
     Serializable,
+    deserialize_callable,
+    deserialize_lambda_expression,
     register_serializable,
     serialize_callable,
     serialize_callable_with_fallback,
-    deserialize_callable,
-    deserialize_lambda_expression,
-    ObjectRegistry,
 )
 
 

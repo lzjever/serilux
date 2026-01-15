@@ -6,7 +6,7 @@ Generic serialization/deserialization for objects and callable types.
 
 import importlib
 import inspect
-from typing import Any, Dict, List, Optional, Callable
+from typing import Any, Callable, Dict, List, Optional
 
 
 class SerializableRegistry:
@@ -148,9 +148,9 @@ def validate_serializable_tree(obj: "Serializable", visited: Optional[set] = Non
                 continue
 
             # Import Serializable here to avoid circular import
-            SerializableClass = Serializable
+            serializable_class = Serializable
 
-            if isinstance(field_value, SerializableClass):
+            if isinstance(field_value, serializable_class):
                 try:
                     validate_serializable_tree(field_value, visited)
                 except TypeError as e:
@@ -159,7 +159,7 @@ def validate_serializable_tree(obj: "Serializable", visited: Optional[set] = Non
                     ) from e
             elif isinstance(field_value, list):
                 for i, item in enumerate(field_value):
-                    if isinstance(item, SerializableClass):
+                    if isinstance(item, serializable_class):
                         try:
                             validate_serializable_tree(item, visited)
                         except TypeError as e:
@@ -168,7 +168,7 @@ def validate_serializable_tree(obj: "Serializable", visited: Optional[set] = Non
                             ) from e
             elif isinstance(field_value, dict):
                 for key, value in field_value.items():
-                    if isinstance(value, SerializableClass):
+                    if isinstance(value, serializable_class):
                         try:
                             validate_serializable_tree(value, visited)
                         except TypeError as e:
@@ -284,9 +284,13 @@ class Serializable:
         for field in self.fields_to_serialize:
             value = getattr(self, field, None)
             if isinstance(value, Serializable):
-                data[field] = value.serialize(max_depth=max_depth, _current_depth=_current_depth + 1)
+                data[field] = value.serialize(
+                    max_depth=max_depth, _current_depth=_current_depth + 1
+                )
             elif isinstance(value, list):
-                data[field] = [self._serialize_value(item, max_depth, _current_depth) for item in value]
+                data[field] = [
+                    self._serialize_value(item, max_depth, _current_depth) for item in value
+                ]
             elif isinstance(value, dict):
                 # Recursively serialize nested dicts (which may contain Serializable objects)
                 data[field] = {
@@ -317,7 +321,9 @@ class Serializable:
             return [self._serialize_value(item, max_depth, _current_depth) for item in value]
         elif isinstance(value, dict):
             # Recursively serialize dicts (which may contain Serializable objects)
-            return {k: self._serialize_value(v, max_depth, _current_depth) for k, v in value.items()}
+            return {
+                k: self._serialize_value(v, max_depth, _current_depth) for k, v in value.items()
+            }
         elif callable(value) and not isinstance(value, type):
             # Automatically serialize callables (functions, methods, etc.)
             # For methods, validate they belong to the object that owns this field
@@ -1082,23 +1088,42 @@ def deserialize_lambda_expression(
         )
 
         # Also allow operator types (subclasses of ast.cmpop, ast.boolop, etc.)
-        import operator
         import ast as ast_module
 
         operator_types = (
             # Comparison operators
-            ast_module.Eq, ast_module.NotEq, ast_module.Lt, ast_module.LtE,
-            ast_module.Gt, ast_module.GtE, ast_module.Is, ast_module.IsNot,
-            ast_module.In, ast_module.NotIn,
+            ast_module.Eq,
+            ast_module.NotEq,
+            ast_module.Lt,
+            ast_module.LtE,
+            ast_module.Gt,
+            ast_module.GtE,
+            ast_module.Is,
+            ast_module.IsNot,
+            ast_module.In,
+            ast_module.NotIn,
             # Boolean operators
-            ast_module.And, ast_module.Or,
+            ast_module.And,
+            ast_module.Or,
             # Binary operators
-            ast_module.Add, ast_module.Sub, ast_module.Mult, ast_module.Div,
-            ast_module.FloorDiv, ast_module.Mod, ast_module.Pow, ast_module.LShift,
-            ast_module.RShift, ast_module.BitOr, ast_module.BitXor, ast_module.BitAnd,
+            ast_module.Add,
+            ast_module.Sub,
+            ast_module.Mult,
+            ast_module.Div,
+            ast_module.FloorDiv,
+            ast_module.Mod,
+            ast_module.Pow,
+            ast_module.LShift,
+            ast_module.RShift,
+            ast_module.BitOr,
+            ast_module.BitXor,
+            ast_module.BitAnd,
             ast_module.MatMult,
             # Unary operators
-            ast_module.UAdd, ast_module.USub, ast_module.Not, ast_module.Invert,
+            ast_module.UAdd,
+            ast_module.USub,
+            ast_module.Not,
+            ast_module.Invert,
         )
 
         try:
@@ -1107,13 +1132,42 @@ def deserialize_lambda_expression(
 
             # Whitelist of allowed function names
             safe_functions = {
-                "isinstance", "dict", "list", "str", "int", "float", "bool",
-                "len", "sum", "min", "max", "abs", "any", "all", "range",
-                "enumerate", "zip", "map", "filter", "sorted", "reversed",
-                "set", "tuple", "frozenset", "bytes", "bytearray",
-                "ord", "chr", "hex", "oct", "bin",
-                "round", "pow", "divmod",
-                "hasattr", "getattr",
+                "isinstance",
+                "dict",
+                "list",
+                "str",
+                "int",
+                "float",
+                "bool",
+                "len",
+                "sum",
+                "min",
+                "max",
+                "abs",
+                "any",
+                "all",
+                "range",
+                "enumerate",
+                "zip",
+                "map",
+                "filter",
+                "sorted",
+                "reversed",
+                "set",
+                "tuple",
+                "frozenset",
+                "bytes",
+                "bytearray",
+                "ord",
+                "chr",
+                "hex",
+                "oct",
+                "bin",
+                "round",
+                "pow",
+                "divmod",
+                "hasattr",
+                "getattr",
             }
 
             # Validate AST nodes
@@ -1130,8 +1184,8 @@ def deserialize_lambda_expression(
                     # Only allow method calls on names (not arbitrary expressions)
                     if not isinstance(node.func, (ast.Name, ast.Attribute)):
                         raise ValueError(
-                            f"Unsafe function call in lambda expression. "
-                            f"Only simple method calls are allowed."
+                            "Unsafe function call in lambda expression. "
+                            "Only simple method calls are allowed."
                         )
 
                     # Check if function name is in whitelist
@@ -1152,14 +1206,47 @@ def deserialize_lambda_expression(
         # Safe evaluation to restore lambda
         # Whitelist of allowed function names
         safe_functions = {
-            "isinstance", "dict", "list", "str", "int", "float", "bool",
-            "len", "sum", "min", "max", "abs", "any", "all", "range",
-            "enumerate", "zip", "map", "filter", "sorted", "reversed",
-            "set", "tuple", "frozenset", "bytes", "bytearray",
-            "ord", "chr", "hex", "oct", "bin",
-            "round", "pow", "divmod",
-            "isinstance", "issubclass", "hasattr", "getattr", "setattr",
-            "getitem", "getslice",
+            "isinstance",
+            "dict",
+            "list",
+            "str",
+            "int",
+            "float",
+            "bool",
+            "len",
+            "sum",
+            "min",
+            "max",
+            "abs",
+            "any",
+            "all",
+            "range",
+            "enumerate",
+            "zip",
+            "map",
+            "filter",
+            "sorted",
+            "reversed",
+            "set",
+            "tuple",
+            "frozenset",
+            "bytes",
+            "bytearray",
+            "ord",
+            "chr",
+            "hex",
+            "oct",
+            "bin",
+            "round",
+            "pow",
+            "divmod",
+            "isinstance",
+            "issubclass",
+            "hasattr",
+            "getattr",
+            "setattr",
+            "getitem",
+            "getslice",
         }
 
         safe_globals = {

@@ -3,6 +3,7 @@ Tests for the Serializable class and core serialization functionality.
 """
 
 import pytest
+
 from serilux import Serializable, register_serializable
 
 

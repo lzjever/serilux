@@ -3,7 +3,8 @@ Tests for the SerializableRegistry class.
 """
 
 import pytest
-from serilux import SerializableRegistry, Serializable, register_serializable
+
+from serilux import Serializable, SerializableRegistry, register_serializable
 
 
 class TestSerializableRegistry:

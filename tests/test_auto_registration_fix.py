@@ -6,9 +6,9 @@ automatically registered in Phase 2, allowing their methods to be deserialized.
 """
 
 from serilux import (
+    ObjectRegistry,
     Serializable,
     register_serializable,
-    ObjectRegistry,
 )
 
 
