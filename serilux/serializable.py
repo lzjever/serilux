@@ -13,6 +13,7 @@ from serilux.exceptions import (
     DepthLimitError,
     DeserializationError,
     InvalidFieldError,
+    SeriluxError,
     UnknownFieldError,
 )
 
@@ -251,8 +252,10 @@ class Serializable:
         """
         if not all(isinstance(field, str) for field in fields):
             raise InvalidFieldError(field_name="multiple", reason="All fields must be strings")
-        self.fields_to_serialize.extend(fields)
-        self.fields_to_serialize = list(set(self.fields_to_serialize))
+
+        for field in fields:
+            if field not in self.fields_to_serialize:
+                self.fields_to_serialize.append(field)
 
     def remove_serializable_fields(self, fields: List[str]) -> None:
         """Remove field names from the list that should be included in serialization.
@@ -399,10 +402,17 @@ class Serializable:
                         # Will raise error in Phase 2, skip for now
                         return None, []
 
-                    obj = attr_class()
                     object_id = container.get("_id")
+                    obj = None
+                    if object_id and registry:
+                        obj = registry.find_by_id(object_id)
+
+                    if obj is None:
+                        obj = attr_class()
+                        if object_id:
+                            registry.register(obj, object_id=object_id)
+
                     if object_id:
-                        registry.register(obj, object_id=object_id)
                         found_objects.append((obj, object_id, container))
                     return obj, found_objects
                 else:
@@ -474,54 +484,13 @@ class Serializable:
                 continue
 
             try:
-                if isinstance(value, dict):
-                    if "_type" in value:
-                        # Check if it's a callable serialization (callable or lambda_expression)
-                        if (
-                            value.get("_type") == "callable"
-                            or value.get("_type") == "lambda_expression"
-                        ):
-                            attr = deserialize_callable(value, registry=registry)
-                        else:
-                            # Try to deserialize as Serializable object
-                            attr_class = SerializableRegistry.get_class(value["_type"])
-                            if attr_class is None:
-                                raise ClassNotFoundError(value["_type"])
-                            attr: Serializable = attr_class()
-                            # Register object in registry if it has an _id (for method deserialization)
-                            # This ensures methods in nested objects can find their owner objects
-                            if registry is not None:
-                                object_id = value.get("_id")
-                                if object_id:
-                                    registry.register(attr, object_id=object_id)
-                                elif hasattr(attr, "_id") and getattr(attr, "_id", None):
-                                    registry.register(attr, object_id=getattr(attr, "_id"))
-
-                            # Check if deserialize accepts registry parameter
-                            import inspect
-
-                            deserialize_sig = inspect.signature(attr.deserialize)
-                            if "registry" in deserialize_sig.parameters:
-                                attr.deserialize(value, registry=registry)
-                            else:
-                                attr.deserialize(value)
-                    else:
-                        # Regular dict - deserialize recursively (pre_created objects are already registered in Phase 1)
-                        # deserialize_item will check registry first before creating new objects
-                        attr = {
-                            k: Serializable.deserialize_item(v, registry=registry)
-                            for k, v in value.items()
-                        }
-                elif isinstance(value, list):
-                    # List - deserialize recursively (pre_created objects are already registered in Phase 1)
-                    # deserialize_item will check registry first before creating new objects
-                    attr = [
-                        Serializable.deserialize_item(item, registry=registry) for item in value
-                    ]
-                else:
-                    attr = value
+                # Use deserialize_item for all field values (handles single objects, lists, and dicts)
+                # It will check registry first, preserving identity for objects found in Phase 1
+                attr = Serializable.deserialize_item(value, registry=registry)
                 setattr(self, key, attr)
             except Exception as e:
+                if isinstance(e, SeriluxError):
+                    raise
                 raise DeserializationError(
                     message=f"Failed to deserialize field '{key}'",
                     obj_type=type(self).__name__,

@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.4.0] - 2025-01-15
+## [0.4.0] - 2026-03-02
 
 ### Added
 - **Test coverage gate**: Enforced 80% minimum test coverage in CI
@@ -24,6 +24,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Pre-commit hooks**: Added comprehensive pre-commit configuration for code quality
 - **CLAUDE.md**: Added project guide for Claude Code AI assistant
 - **Architecture documentation**: Added comprehensive architecture documentation in `docs/architecture.md`
+
+### Fixed
+- **Object Identity Preservation**: Fixed a bug where shared object references were broken during deserialization when an object was present in both containers and single fields.
+- **Deserialization Phase 2**: Simplified and corrected Phase 2 loop to use `deserialize_item` consistently, ensuring all nested objects are correctly resolved from the registry.
+- **Field Determinism**: Fixed `add_serializable_fields` to preserve field registration order, ensuring deterministic serialization output.
+- **Import Error**: Fixed a missing `SeriluxError` import in `serializable.py` that caused `NameError` during some error conditions.
 
 ### Changed
 - **CI configuration**: Replaced `black` with `ruff format` for consistency
