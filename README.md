@@ -337,6 +337,22 @@ make test-cov
 pytest tests/
 ```
 
+## 📜 Project Charter
+
+Serilux is the **modern, secure, and human-readable evolution of Pickle**. Our mission is to make the persistence of complex Python object trees as simple as handling JSON, while uniquely preserving code logic (methods) and object identity.
+
+*Check out our full **[Project Charter](CHARTER.md)** for our design philosophy and mandated security standards.*
+
+## 🗺️ Roadmap
+
+We are currently in **Phase 0 (Foundation)**. Our next major milestones include:
+
+- **Phase 1 (0.5.x)**: Boilerplate reduction via Type-Hints and Dataclass integration.
+- **Phase 2 (0.6.x)**: Performance optimization with Msgpack/CBOR and Lazy Loading.
+- **Phase 3 (0.7.x)**: Ecosystem plugins for NumPy, Pandas, and data versioning.
+
+*See the detailed **[Roadmap](ROADMAP.md)** for more upcoming features.*
+
 ## 🤝 Contributing
 
 We welcome contributions! Here's how you can help:
