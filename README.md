@@ -91,19 +91,17 @@ make dev-install
 
 ### Create Your First Serializable Class in 3 Steps
 
-**Step 1: Define a Serializable Class**
+**Step 1: Define a Serializable Class (Zero-Boilerplate!)**
 
 ```python
 from serilux import Serializable, register_serializable
 
 @register_serializable
 class Person(Serializable):
-    def __init__(self):
-        super().__init__()
-        self.name = ""
-        self.age = 0
-        # Register fields to serialize
-        self.add_serializable_fields(["name", "age"])
+    name: str = ""
+    age: int = 0
+    # ✨ Type hints are automatically discovered! 
+    # No manual add_serializable_fields required.
 ```
 
 **Step 2: Create and Use Objects**
@@ -131,6 +129,24 @@ print(new_person.age)   # 30
 ```
 
 **🎉 Done!** You've created your first serializable class.
+
+### 📦 Dataclass Support
+
+Serilux 0.5.0+ natively supports standard Python `dataclasses`:
+
+```python
+import dataclasses
+from serilux import Serializable, register_serializable
+
+@register_serializable
+@dataclasses.dataclass
+class Point(Serializable):
+    x: int = 0
+    y: int = 0
+
+p = Point(x=10, y=20)
+data = p.serialize() # {'_type': 'Point', 'x': 10, 'y': 20}
+```
 
 ## 💡 Key Features
 

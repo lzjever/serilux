@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-03-02
+
+### Added
+- **Type-Hint Auto-Discovery**: Fields with type hints are now automatically registered for serialization, significantly reducing boilerplate.
+- **Dataclass Native Support**: Standard Python `dataclasses` are now supported as `Serializable` objects without manual field registration.
+- **Constructor Parameter Mapping**: Improved deserialization to support objects with required `__init__` arguments by mapping them from serialized data.
+- **ObjectFactory**: New internal component for intelligent object instantiation during deserialization.
+- **Testing Utility**: Added `SerializableRegistry.clear_registry()` to facilitate clean test environments.
+
+### Changed
+- **Registration Flexibility**: Relaxed `__init__` validation in `@register_serializable` to allow classes with required parameters (mapped from data).
+- **Initialization Robustness**: `serialize()` and `deserialize()` now ensure internal state is initialized even if `__init__` was bypassed (common in dataclasses).
+
 ## [0.4.0] - 2026-03-02
 
 ### Added

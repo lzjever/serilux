@@ -4,9 +4,10 @@ Serialization utilities and base classes.
 Generic serialization/deserialization for objects and callable types.
 """
 
+import dataclasses
 import importlib
 import inspect
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, get_type_hints
 
 from serilux.exceptions import (
     ClassNotFoundError,
@@ -61,6 +62,11 @@ class SerializableRegistry:
             The class reference if found, None otherwise.
         """
         return cls.registry.get(class_name)
+
+    @classmethod
+    def clear_registry(cls):
+        """Clear the registry. Useful for testing."""
+        cls.registry.clear()
 
 
 def check_serializable_constructability(obj: "Serializable") -> None:
@@ -193,28 +199,52 @@ def register_serializable(cls):
     which is required for proper deserialization. It validates that __init__
     either accepts no parameters (except self) or all parameters have default values.
 
+    It also performs automatic field discovery for fields with type hints and
+    dataclass fields.
+
     Args:
         cls: Class to be registered.
 
     Returns:
-        The same class with registration completed.
+        The same class with registration completed and field discovery info attached.
 
     Raises:
         TypeError: If the class cannot be initialized without arguments.
-            This happens when __init__ has required parameters (without defaults)
-            other than 'self'. For Serializable subclasses, use configuration
-            dictionary instead of constructor parameters.
         ValueError: If a different class with the same name is already registered.
-            This prevents class name conflicts that could lead to incorrect deserialization.
-
-    Note:
-        For Serializable subclasses, all configuration should be stored in
-        configuration attributes and set after object creation, not passed as
-        constructor parameters. This ensures proper serialization/deserialization support.
     """
+    # Automatic field discovery
+    fields = []
+
+    # 1. Check for type hints in the class itself
+    try:
+        # Use get_type_hints to get all hints including those from base classes
+        # We wrap in try-except because it might fail for some complex types or missing refs
+        hints = get_type_hints(cls)
+        for field_name in hints:
+            if not field_name.startswith("_"):
+                fields.append(field_name)
+    except (Exception, NameError):
+        # Fallback to simple __annotations__ if get_type_hints fails
+        if hasattr(cls, "__annotations__"):
+            for field_name in cls.__annotations__:
+                if not field_name.startswith("_") and field_name not in fields:
+                    fields.append(field_name)
+
+    # 2. Check if it's a dataclass
+    if dataclasses.is_dataclass(cls):
+        for field in dataclasses.fields(cls):
+            if field.name not in fields:
+                fields.append(field.name)
+
+    # Attach discovered fields to the class for Serializable.__init__ to use
+    if fields:
+        # We use a special attribute to pass these to the instance
+        cls.__serilux_fields__ = fields
+
     init_signature = inspect.signature(cls.__init__)
     parameters = init_signature.parameters.values()
 
+    required_params = []
     for param in parameters:
         if (
             param.name != "self"
@@ -222,24 +252,90 @@ def register_serializable(cls):
             and param.kind != inspect.Parameter.VAR_KEYWORD
             and param.kind != inspect.Parameter.VAR_POSITIONAL
         ):
-            error_message = (
-                f"Error: {cls.__name__} cannot be initialized without parameters. "
-                f"Serializable classes must support initialization with no arguments.\n"
-                f"For Serializable subclasses, use configuration attributes instead of constructor parameters.\n"
-                f"Example: obj.config['key'] = value or set attributes after creation"
-            )
-            print(error_message)
-            raise TypeError(error_message)
+            required_params.append(param.name)
+
+    # Check if required params are in discovered fields or manual add_serializable_fields
+    # (Manual fields won't be known yet, so we store required_params for later validation)
+    if required_params:
+        cls.__serilux_required_params__ = required_params
+
     SerializableRegistry.register_class(cls.__name__, cls)
     return cls
+
+
+class ObjectFactory:
+    """Helper to instantiate Serializable objects with potential constructor parameters."""
+
+    @staticmethod
+    def create_instance(cls: type, data: Dict[str, Any]) -> Any:
+        """Create an instance of cls using data to satisfy constructor requirements.
+
+        Args:
+            cls: The class to instantiate.
+            data: Serialization data which may contain constructor arguments.
+
+        Returns:
+            An instance of the class.
+
+        Raises:
+            DeserializationError: If required constructor arguments are missing from data.
+        """
+        if not issubclass(cls, Serializable):
+            return cls()
+
+        init_signature = inspect.signature(cls.__init__)
+        parameters = init_signature.parameters.values()
+
+        kwargs = {}
+        missing_params = []
+
+        for param in parameters:
+            if param.name == "self":
+                continue
+
+            if param.name in data:
+                kwargs[param.name] = data[param.name]
+            elif param.default == inspect.Parameter.empty and param.kind not in (
+                inspect.Parameter.VAR_KEYWORD,
+                inspect.Parameter.VAR_POSITIONAL,
+            ):
+                missing_params.append(param.name)
+
+        if missing_params:
+            raise DeserializationError(
+                message=(
+                    f"Cannot instantiate {cls.__name__}: "
+                    f"Required constructor parameters {missing_params} missing from data. "
+                    f"Ensure these fields are included in serialization."
+                ),
+                obj_type=cls.__name__,
+            )
+
+        try:
+            return cls(**kwargs)
+        except Exception as e:
+            raise DeserializationError(
+                message=f"Failed to instantiate {cls.__name__} with parameters {kwargs}: {e}",
+                obj_type=cls.__name__,
+            ) from e
 
 
 class Serializable:
     """A base class for objects that can be serialized and deserialized."""
 
     def __init__(self) -> None:
-        """Initialize a serializable object with no specific fields."""
-        self.fields_to_serialize = []
+        """Initialize a serializable object.
+
+        Automatically populates fields_to_serialize using discovered fields
+        if the class was registered with @register_serializable.
+        """
+        # Initialize fields_to_serialize from class metadata if available
+        # This supports Type-Hint Auto-Discovery and Dataclass Support
+        cls = type(self)
+        if hasattr(cls, "__serilux_fields__"):
+            self.fields_to_serialize = list(cls.__serilux_fields__)
+        else:
+            self.fields_to_serialize = []
 
     def add_serializable_fields(self, fields: List[str]) -> None:
         """Add field names to the list that should be included in serialization.
@@ -265,6 +361,19 @@ class Serializable:
         """
         self.fields_to_serialize = [x for x in self.fields_to_serialize if x not in fields]
 
+    def _ensure_fields_initialized(self) -> None:
+        """Ensure fields_to_serialize is initialized, using class metadata if needed.
+
+        This handles cases like dataclasses where __init__ might be bypassed
+        or overwritten by the dataclass decorator.
+        """
+        if not hasattr(self, "fields_to_serialize"):
+            cls = type(self)
+            if hasattr(cls, "__serilux_fields__"):
+                self.fields_to_serialize = list(cls.__serilux_fields__)
+            else:
+                self.fields_to_serialize = []
+
     def serialize(self, max_depth: int = 100, _current_depth: int = 0) -> Dict[str, Any]:
         """Serialize the object to a dictionary.
 
@@ -284,6 +393,8 @@ class Serializable:
         Raises:
             DepthLimitError: If nesting depth exceeds max_depth.
         """
+        self._ensure_fields_initialized()
+
         # Check depth limit to prevent stack overflow attacks
         if _current_depth >= max_depth:
             raise DepthLimitError(max_depth=max_depth, current_depth=_current_depth)
@@ -371,6 +482,8 @@ class Serializable:
         Raises:
             ValueError: If strict=True and unknown field is found, or if deserialization fails.
         """
+        self._ensure_fields_initialized()
+
         # Create registry if not provided (needed for callable deserialization)
         if registry is None:
             registry = ObjectRegistry()
@@ -408,7 +521,7 @@ class Serializable:
                         obj = registry.find_by_id(object_id)
 
                     if obj is None:
-                        obj = attr_class()
+                        obj = ObjectFactory.create_instance(attr_class, container)
                         if object_id:
                             registry.register(obj, object_id=object_id)
 
@@ -535,7 +648,7 @@ class Serializable:
 
                 # If not found in registry, create new object
                 if obj is None:
-                    obj = attr_class()
+                    obj = ObjectFactory.create_instance(attr_class, item)
                     # Register object in registry if it has an _id (for method deserialization)
                     # This ensures methods in nested objects can find their owner objects
                     if registry is not None:

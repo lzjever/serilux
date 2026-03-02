@@ -3,9 +3,9 @@
 ## Phase 1: Efficiency & Modernization (0.5.x)
 **Goal**: Reduce boilerplate and improve the developer experience (DX).
 
-- [ ] **Type-Hint Auto-Discovery**: Optional automatic field registration by parsing Python 3.8+ type annotations.
-- [ ] **Dataclass Native Support**: A specialized decorator (e.g., `@serializable_dataclass`) to eliminate the need for `add_serializable_fields`.
-- [ ] **Constructor Parameter Mapping**: Support for `__init__` parameters during deserialization (mapping dict keys to constructor arguments).
+- [x] **Type-Hint Auto-Discovery**: Optional automatic field registration by parsing Python 3.8+ type annotations.
+- [x] **Dataclass Native Support**: A specialized decorator (e.g., `@serializable_dataclass`) to eliminate the need for `add_serializable_fields`.
+- [x] **Constructor Parameter Mapping**: Support for `__init__` parameters during deserialization (mapping dict keys to constructor arguments).
 - [ ] **Enhanced AST Sandbox**: Expand the default whitelist for math and logic functions while maintaining strict security.
 
 ## Phase 2: Performance & Scalability (0.6.x)

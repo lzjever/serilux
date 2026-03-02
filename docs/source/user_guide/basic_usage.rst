@@ -7,11 +7,28 @@ Creating Serializable Classes
 ------------------------------
 
 To create a serializable class, inherit from ``Serializable`` and use the
-``@register_serializable`` decorator:
+``@register_serializable`` decorator.
+
+**Zero-Boilerplate Approach (Recommended)**:
+
+Starting with Serilux 0.5.0, fields with type hints are automatically discovered.
+You don't need to manually call ``add_serializable_fields()`` for these fields.
 
 .. code-block:: python
 
    from serilux import Serializable, register_serializable
+
+   @register_serializable
+   class MyClass(Serializable):
+       field1: str = ""
+       field2: int = 0
+       # ✨ field1 and field2 are automatically discovered!
+
+**Manual Approach**:
+
+For fields without type hints or when more control is needed, use ``add_serializable_fields()``:
+
+.. code-block:: python
 
    @register_serializable
    class MyClass(Serializable):
@@ -20,6 +37,39 @@ To create a serializable class, inherit from ``Serializable`` and use the
            self.field1 = ""
            self.field2 = 0
            self.add_serializable_fields(["field1", "field2"])
+
+**Dataclass Support**:
+
+Serilux natively supports Python ``dataclasses``:
+
+.. code-block:: python
+
+   import dataclasses
+   from serilux import Serializable, register_serializable
+
+   @register_serializable
+   @dataclasses.dataclass
+   class Point(Serializable):
+       x: int = 0
+       y: int = 0
+
+**Constructor Parameter Mapping**:
+
+Serilux 0.5.0+ can reconstruct objects using ``__init__`` arguments from the serialized data.
+This allows you to use classes with required constructor parameters:
+
+.. code-block:: python
+
+   @register_serializable
+   class User(Serializable):
+       def __init__(self, uid: int, login: str):
+           super().__init__()
+           self.uid = uid
+           self.login = login
+           self.add_serializable_fields(["uid", "login"])
+
+   # Deserialization will map 'uid' and 'login' from data to __init__
+   new_user = Serializable.deserialize_item(data)
 
 Class Name Conflict Detection
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

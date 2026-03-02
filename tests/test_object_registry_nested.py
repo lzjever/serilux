@@ -2,49 +2,68 @@
 Test ObjectRegistry with nested objects to verify automatic registration works.
 """
 
+import pytest
+
 from serilux import (
     ObjectRegistry,
     Serializable,
     register_serializable,
 )
+from serilux.serializable import SerializableRegistry
 
 
-@register_serializable
-class Address(Serializable):
-    """Address with a method field."""
+@pytest.fixture(autouse=True)
+def setup_classes():
+    """Register classes for each test manually since fixture clears registry."""
+    SerializableRegistry.clear_registry()
 
-    def __init__(self):
-        super().__init__()
-        self._id = None
-        self.street = ""
-        self.handler = self.process_address  # Method field
-        self.add_serializable_fields(["_id", "street", "handler"])
+    @register_serializable
+    class Address(Serializable):
+        """Address with a method field."""
 
-    def process_address(self, data):
-        """Process address data."""
-        return f"Address: {data}"
+        def __init__(self):
+            super().__init__()
+            self._id = None
+            self.street = ""
+            self.handler = self.process_address  # Method field
+            self.add_serializable_fields(["_id", "street", "handler"])
 
+        def process_address(self, data):
+            """Process address data."""
+            return f"Address: {data}"
 
-@register_serializable
-class PersonWithAddress(Serializable):
-    """Person with nested Address object."""
+    @register_serializable
+    class PersonWithAddress(Serializable):
+        """Person with nested Address object."""
 
-    def __init__(self):
-        super().__init__()
-        self._id = None
-        self.name = ""
-        self.address = None  # Single object field (not in container)
-        self.add_serializable_fields(["_id", "name", "address"])
+        def __init__(self):
+            super().__init__()
+            self._id = None
+            self.name = ""
+            self.address = None  # Single object field (not in container)
+            self.add_serializable_fields(["_id", "name", "address"])
+
+    # Inject into global scope for tests to use
+    globals()["Address"] = Address
+    globals()["PersonWithAddress"] = PersonWithAddress
+
+    yield
+
+    # Clean up
+    if "Address" in globals():
+        del globals()["Address"]
+    if "PersonWithAddress" in globals():
+        del globals()["PersonWithAddress"]
 
 
 def test_nested_object_with_method_auto_registration():
     """Test that nested objects with methods are automatically registered."""
     # Create objects
-    person = PersonWithAddress()
+    person = PersonWithAddress()  # noqa: F821
     person._id = "person1"
     person.name = "Alice"
 
-    address = Address()
+    address = Address()  # noqa: F821
     address._id = "addr1"
     address.street = "123 Main St"
     person.address = address
@@ -53,7 +72,7 @@ def test_nested_object_with_method_auto_registration():
     data = person.serialize()
 
     # Deserialize
-    new_person = PersonWithAddress()
+    new_person = PersonWithAddress()  # noqa: F821
     registry = ObjectRegistry()
     registry.register(new_person, object_id="person1")
     new_person.deserialize(data, registry=registry)
@@ -63,7 +82,6 @@ def test_nested_object_with_method_auto_registration():
     assert new_person.address.street == "123 Main St"
 
     # Verify address's method works (this tests auto-registration)
-    # The address should have been registered in Phase 2, so its method can find it
     assert new_person.address.handler is not None
     assert callable(new_person.address.handler)
     result = new_person.address.handler("test")
@@ -72,7 +90,6 @@ def test_nested_object_with_method_auto_registration():
 
 def test_nested_object_in_container():
     """Test that objects in containers are registered in Phase 1."""
-    from serilux import register_serializable
 
     @register_serializable
     class TeamWithMembers(Serializable):
@@ -82,11 +99,11 @@ def test_nested_object_in_container():
             self.add_serializable_fields(["members"])
 
     team = TeamWithMembers()
-    person1 = PersonWithAddress()
+    person1 = PersonWithAddress()  # noqa: F821
     person1._id = "person1"
     person1.name = "Alice"
 
-    address1 = Address()
+    address1 = Address()  # noqa: F821
     address1._id = "addr1"
     address1.street = "123 Main St"
     person1.address = address1

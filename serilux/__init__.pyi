@@ -52,5 +52,5 @@ def deserialize_lambda_expression(
 def extract_callable_expression(func: Callable[..., Any]) -> Optional[str]: ...
 
 __version__: str
-__version__ = "0.4.0"
+__version__ = "0.5.0"
 __all__: List[str]
